@@ -1,123 +1,204 @@
-# LTX-2
+# LTX-2.3 → Seedance 2.0
 
-[![Website](https://img.shields.io/badge/Website-LTX-181717?logo=google-chrome)](https://ltx.io)
-[![Model](https://img.shields.io/badge/HuggingFace-Model-orange?logo=huggingface)](https://huggingface.co/Lightricks/LTX-2.3)
-[![Demo](https://img.shields.io/badge/Demo-Try%20Now-brightgreen?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAFKADAAQAAAABAAAAFAAAAACy3fD9AAACmElEQVQ4Ea1VP2haYRA/fRo0mESRIIqb2IwxuNUl0CGFQBC6OAWcikMottCpqYtDQIgdQsBFhAjZqiQhbhmySJBOgmNU0EGCg9r61Bivd0ffoykE0iQH37/77n7f3e/uqQFIPB7P/N3d3QeDwfAFEedZ91ghnyH5JM1m87dWq6UavF6vdTKZfDcajW/p4rE49+wIFMj33Gq1vlNo+kxg758KpiETqP/29vaXweVyqaS0aBfPXEfGFwTjWCwM+KBQoWA4HAJx/KDNvxcmTTGbzYAH8SljOp2C2+2GjY0NqNfrcHFxAXNzc2LDfCuKIq78KBdFOwsgGzidTnA4HHBzcwO9Xg8sFgtsbm7C3t4eVCoVaDQa0O12YXl5GUwmk5z5cZ/PB6PRCNrttgADFQUXFhbw8PAQVVXF3d1dJAeMx+P0zn0Jh8OYz+eRADCRSGAqlcLxeIz7+/u4tLSEjKUDZrNZ8U4mk0jR4fr6Op6enoru+voa0+k0rq2tYTAYxE6ng9QiSLRgrVZDv9+PFLkA6kUhT+GEC8C8XF5ewtHRkejICShiaDabwPvj42NJm3k7ODiQdDl9Fr0ocqJpdXUVIpEIdz7Y7XZRr6ysQDQahXK5LORvbW1p5rC9vQ2UifAooBqHuVxO0vt72tnZwWq1qqtisRgWCgU5ZzIZPDk50fdUUEmZvxTmAgKBgAxunT/fJpRKJWmhUCgEVDi4uroSG46kWCzC4uKitNVgMICzszOhSgA5fiJZhp4Lbbh1KARpbF65D/lx3vMdP05Vlkf5zKIDyukFJi7N6AVwNAhVsdlsM+LsjaZ56sq8kyQUqs4P6rsAKV49B4x4Padf7Y9Kv9+fEmiBQH8S4Gsa5v8EHpL9VwL7xH8BvwEcd4ccVf02KQAAAABJRU5ErkJggg==)](https://console.ltx.video/playground)
-[![Paper](https://img.shields.io/badge/Paper-PDF-EC1C24?logo=adobeacrobatreader&logoColor=white)](https://arxiv.org/abs/2601.03233)
-[![Discord](https://img.shields.io/badge/Join-Discord-5865F2?logo=discord)](https://discord.gg/ltxplatform)
+[![Base Model](https://img.shields.io/badge/Base%20Model-LTX--2.3-orange?logo=huggingface)](https://huggingface.co/Lightricks/LTX-2.3)
+[![Inspired By](https://img.shields.io/badge/Inspired%20By-Seedance%202.0-blue)](https://seedance.ai)
+[![Paper](https://img.shields.io/badge/Paper-ID--LoRA-EC1C24?logo=adobeacrobatreader&logoColor=white)](https://arxiv.org/abs/2603.10256)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-**LTX-2** is the first DiT-based audio-video foundation model that contains all core capabilities of modern video generation in one model: synchronized audio and video, high fidelity, multiple performance modes, production-ready outputs, API access, and open access.
+**LTX-2.3 → Seedance 2.0** 是基于 [Lightricks/LTX-2](https://github.com/Lightricks/LTX-2) 开源项目及 LTX-2.3 开源模型权重，进行微调训练，整合成一个**统一 LLM 输入、多模态参考、音画同出**的视频生成模型。
 
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/4414adc0-086c-43de-b367-9362eeb20228" width="70%" poster=""> </video>
-</div>
+核心思路借鉴 [Seedance 2.0](https://seedance.ai) 的 `@mention` 引用绑定机制与 [ID-LoRA](https://arxiv.org/abs/2603.10256) 的参考条件注入方式，在 LTX-2.3 的 Dual-Stream DiT 架构上实现多参考条件融合，使模型能够同时接受图像、视频、音频等多种参考输入，并生成音画同步的高质量视频。
+
+## ✨ 核心特性
+
+- **多模态参考输入** — 同时支持图像（身份/外观/风格）、视频（动作/运镜）、音频（节奏/氛围）参考
+- **@mention 语义绑定** — 类似 Seedance 2.0，通过 `@Image1 for identity` 语法将参考与语义属性绑定
+- **音画同出** — 基于 LTX-2.3 的 Dual-Stream 架构，视频与音频联合生成
+- **中文语义解析** — 支持 Gemma 3 语义解析器处理中文/混合语言 prompt
+- **LoRA 微调** — 仅训练 LoRA 权重，保留基座模型全部能力
+- **Identity Guidance** — CFG 变体，在"有参考"与"无参考"预测之间外推，增强身份保真度
+
+## 🏗️ 架构概览
+
+```
+Prompt: "A woman @Image1 for identity walks in @Image2's park.
+         Replicate @Video1's camera. @Audio1 for rhythm."
+
+┌─────────────────────────────────────────────────────────┐
+│                   @mention Prompt Parser                 │
+│  Rule-based / Semantic (Gemma 3)                         │
+│  Extracts: @Image1→identity, @Image2→scene,             │
+│            @Video1→camera, @Audio1→audio_rhythm          │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────┐
+│         UnifiedMultiReferenceConditioning                │
+│  - Patchify each reference latent                       │
+│  - Concatenate reference tokens to sequence (IC-LoRA)   │
+│  - Negative temporal positions for reference groups      │
+│  - Isolated attention between reference groups (0 mask)  │
+│  - Full cross-attention target↔each reference (1.0)     │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────┐
+│              LTX-2.3 Dual-Stream Transformer            │
+│  Video Stream (14B) ←→ Cross-Modal Attn ←→ Audio (5B)  │
+│  LoRA on to_q/k/v/out for attribute routing             │
+│  Text cross-attention handles semantic routing           │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/Lightricks/LTX-2.git
-cd LTX-2
+git clone https://github.com/WANGLILIN360/LTX-2.3-to-Seedance2.0.git
+cd LTX-2.3-to-Seedance2.0
 
 # Set up the environment
 uv sync --frozen
-source .venv/bin/activate
+source .venv/bin/activate   # Linux/Mac
+# or .venv\Scripts\activate  # Windows
 ```
 
 ### Required Models
 
 Download the following models from the [LTX-2.3 HuggingFace repository](https://huggingface.co/Lightricks/LTX-2.3):
 
-**LTX-2.3 Model Checkpoint** (choose and download one of the following)
-  * [`ltx-2.3-22b-dev.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-dev.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-dev.safetensors)
-  * [`ltx-2.3-22b-distilled-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-distilled-1.1.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled-1.1.safetensors)
+**LTX-2.3 Model Checkpoint** (choose one)
+  * [`ltx-2.3-22b-dev.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-dev.safetensors) — [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-dev.safetensors)
+  * [`ltx-2.3-22b-distilled-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-distilled-1.1.safetensors) — [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled-1.1.safetensors)
 
-**Spatial Upscaler** - Required for current two-stage pipeline implementations in this repository
-  * [`ltx-2.3-spatial-upscaler-x2-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors)
-  * [`ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x1.5-1.0.safetensors)
+**Spatial Upscaler**
+  * [`ltx-2.3-spatial-upscaler-x2-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors) — [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors)
 
-**Temporal Upscaler** - Supported by the model and will be required for future pipeline implementations
-  * [`ltx-2.3-temporal-upscaler-x2-1.0.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-temporal-upscaler-x2-1.0.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-temporal-upscaler-x2-1.0.safetensors)
+**Distilled LoRA** (required for two-stage pipelines)
+  * [`ltx-2.3-22b-distilled-lora-384-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors) — [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors)
 
-**Distilled LoRA** - Required for current two-stage pipeline implementations in this repository (except DistilledPipeline, ICLoraPipeline, and LipDubPipeline)
-  * [`ltx-2.3-22b-distilled-lora-384-1.1.safetensors`](https://huggingface.co/Lightricks/LTX-2.3/blob/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors) - [Download](https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors)
-
-**Gemma Text Encoder** (download all assets from the repository)
+**Gemma Text Encoder**
   * [`Gemma 3`](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/tree/main)
 
-**LoRAs**
-  * [`LTX-2.3-22b-IC-LoRA-Union-Control`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control) - [Download](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control/resolve/main/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors)
-  * [`LTX-2.3-22b-IC-LoRA-Motion-Track-Control`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Motion-Track-Control) - [Download](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Motion-Track-Control/resolve/main/ltx-2.3-22b-ic-lora-motion-track-control-ref0.5.safetensors)
-  * [`LTX-2-19b-IC-LoRA-Detailer`](https://huggingface.co/Lightricks/LTX-2-19b-IC-LoRA-Detailer) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-IC-LoRA-Detailer/resolve/main/ltx-2-19b-ic-lora-detailer.safetensors)
-  * [`LTX-2-19b-IC-LoRA-Pose-Control`](https://huggingface.co/Lightricks/LTX-2-19b-IC-LoRA-Pose-Control) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-IC-LoRA-Pose-Control/resolve/main/ltx-2-19b-ic-lora-pose-control.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Dolly-In`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-In) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-In/resolve/main/ltx-2-19b-lora-camera-control-dolly-in.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Dolly-Left`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Left) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Left/resolve/main/ltx-2-19b-lora-camera-control-dolly-left.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Dolly-Out`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Out) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Out/resolve/main/ltx-2-19b-lora-camera-control-dolly-out.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Dolly-Right`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Right) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Right/resolve/main/ltx-2-19b-lora-camera-control-dolly-right.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Jib-Down`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Down) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Down/resolve/main/ltx-2-19b-lora-camera-control-jib-down.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Jib-Up`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Up) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Up/resolve/main/ltx-2-19b-lora-camera-control-jib-up.safetensors)
-  * [`LTX-2-19b-LoRA-Camera-Control-Static`](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Static) - [Download](https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Static/resolve/main/ltx-2-19b-lora-camera-control-static.safetensors)
-  * [`LTX-2.3-22b-IC-LoRA-HDR`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-HDR) - HDR IC-LoRA and pre-computed text embeddings for `HDRICLoraPipeline`
-  * [`LTX-2.3-22b-IC-LoRA-LipDub`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-LipDub) - [Download](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-LipDub/resolve/main/ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors)
+**Official IC-LoRAs** (compatible, can be loaded alongside multi-ref LoRA)
+  * [`LTX-2.3-22b-IC-LoRA-Union-Control`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control)
+  * [`LTX-2.3-22b-IC-LoRA-Motion-Track-Control`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Motion-Track-Control)
+  * [`LTX-2.3-22b-IC-LoRA-HDR`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-HDR)
+  * [`LTX-2.3-22b-IC-LoRA-LipDub`](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-LipDub)
 
-### Available Pipelines
+### Multi-Reference Inference
 
-* **[TI2VidTwoStagesPipeline](packages/ltx-pipelines/src/ltx_pipelines/ti2vid_two_stages.py)** - Production-quality text/image-to-video with 2x upsampling (recommended)
-* **[TI2VidTwoStagesHQPipeline](packages/ltx-pipelines/src/ltx_pipelines/ti2vid_two_stages_hq.py)** - Same two-stage flow as above but uses the res_2s second-order sampler (fewer steps, better quality)
-* **[TI2VidOneStagePipeline](packages/ltx-pipelines/src/ltx_pipelines/ti2vid_one_stage.py)** - Single-stage generation for quick prototyping
-* **[DistilledPipeline](packages/ltx-pipelines/src/ltx_pipelines/distilled.py)** - Fastest inference with 8 predefined sigmas
-* **[ICLoraPipeline](packages/ltx-pipelines/src/ltx_pipelines/ic_lora.py)** - Video-to-video and image-to-video transformations (uses distilled model.)
-* **[KeyframeInterpolationPipeline](packages/ltx-pipelines/src/ltx_pipelines/keyframe_interpolation.py)** - Interpolate between keyframe images
-* **[A2VidPipelineTwoStage](packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py)** - Audio-to-video generation conditioned on an input audio file
-* **[RetakePipeline](packages/ltx-pipelines/src/ltx_pipelines/retake.py)** - Regenerate a specific time region of an existing video
-* **[HDRICLoraPipeline](packages/ltx-pipelines/src/ltx_pipelines/hdr_ic_lora.py)** - Video-to-video with HDR output (linear float frames via LogC3 inverse decode, suitable for EXR export and tonemapping)
-* **[LipDubPipeline](packages/ltx-pipelines/src/ltx_pipelines/lipdub.py)** - Lip dubbing, rephrasing, matching speaker identity (distilled model, single IC-LoRA, Two stages).
+```bash
+python -m ltx_pipelines.unified_multi_ref \
+    --checkpoint-path ./models/LTX-2.3/ltx-2.3-22b-dev.safetensors \
+    --distilled-lora ./models/LTX-2.3/ltx-2.3-22b-distilled-lora-384-1.1.safetensors 0.8 \
+    --spatial-upsampler-path ./models/LTX-2.3/ltx-2.3-spatial-upscaler-x2-1.1.safetensors \
+    --gemma-root ./models/text_encoder \
+    --prompt "A woman @Image1 for identity walks through @Image2's garden. Replicate @Video1's camera dolly. @Audio1 for background rhythm." \
+    --image-references refs/face.jpg refs/park.jpg \
+    --video-references refs/walk.mp4 \
+    --audio-references refs/birds.wav \
+    --output-path output.mp4
+```
 
-### ⚡ Optimization Tips
+### Original Pipelines
 
-* **Use DistilledPipeline** - Fastest inference with only 8 predefined sigmas (8 steps stage 1, 4 steps stage 2)
-* **Enable FP8 quantization** - Enables lower memory footprint: `--quantization fp8-cast` (CLI) or `quantization=QuantizationPolicy.fp8_cast()` (Python). Fp8-cast should be used with bf16 checkpoints, it shall downcast them on the fly. For Hopper GPUs with TensorRT-LLM, use `--quantization fp8-scaled-mm` for FP8 scaled matrix multiplication. Fp8-scaled-mm should be used with fp8 checkpoints.
-* **Install attention optimizations** - Use xFormers (`uv sync --extra xformers`) or [Flash Attention 3](https://github.com/Dao-AILab/flash-attention) for Hopper GPUs
-* **Use gradient estimation** - Reduce inference steps from 40 to 20-30 while maintaining quality (see [pipeline documentation](packages/ltx-pipelines/README.md#denoising-loop-optimization))
-* **Skip memory cleanup** - If you have sufficient VRAM, disable automatic memory cleanup between stages for faster processing
-* **Choose single-stage pipeline** - Use `TI2VidOneStagePipeline` for faster generation when high resolution isn't required
+All original LTX-2 pipelines remain available:
 
-## ✍️ Prompting for LTX-2
+* **TI2VidTwoStagesPipeline** — Production-quality text/image-to-video with 2x upsampling (recommended)
+* **TI2VidTwoStagesHQPipeline** — Second-order sampler, fewer steps, better quality
+* **TI2VidOneStagePipeline** — Single-stage generation for quick prototyping
+* **DistilledPipeline** — Fastest inference with 8 predefined sigmas
+* **ICLoraPipeline** — Video-to-video and image-to-video transformations
+* **KeyframeInterpolationPipeline** — Interpolate between keyframe images
+* **A2VidPipelineTwoStage** — Audio-to-video generation
+* **RetakePipeline** — Regenerate a specific time region of an existing video
+* **HDRICLoraPipeline** — Video-to-video with HDR output
+* **LipDubPipeline** — Lip dubbing with speaker identity matching
 
-When writing prompts, focus on detailed, chronological descriptions of actions and scenes. Include specific movements, appearances, camera angles, and environmental details - all in a single flowing paragraph. Start directly with the action, and keep descriptions literal and precise. Think like a cinematographer describing a shot list. Keep within 200 words. For best results, build your prompts using this structure:
+## 🎯 Multi-Reference Training
 
-- Start with main action in a single sentence
-- Add specific details about movements and gestures
-- Describe character/object appearances precisely
-- Include background and environment details
-- Specify camera angles and movements
-- Describe lighting and colors
-- Note any changes or sudden events
+### Step 1: Prepare Dataset
 
-For additional guidance on writing a prompt please refer to <https://ltx.video/blog/how-to-prompt-for-ltx-2>
+Create a CSV with target video, caption, and reference file paths:
 
-### Automatic Prompt Enhancement
+```csv
+video_path,caption,ref_image_1,ref_image_2,ref_video_1,ref_audio_1
+videos/clip1.mp4,"A woman walks through a garden",refs/face.jpg,refs/park.jpg,refs/walk.mp4,refs/birds.wav
+```
 
-LTX-2 pipelines support automatic prompt enhancement via an `enhance_prompt` parameter.
+### Step 2: Preprocess
 
-## 🔌 ComfyUI Integration
+```bash
+python packages/ltx-trainer/scripts/process_multi_ref.py dataset.csv \
+    --output-dir /path/to/preprocessed \
+    --model-source ./models/LTX-2.3/ltx-2.3-22b-dev.safetensors \
+    --text-encoder-source ./models/text_encoder \
+    --resolution-buckets 768x768x25 \
+    --with-audio
+```
 
-To use our model with ComfyUI, please follow the instructions at <https://github.com/Lightricks/ComfyUI-LTXVideo/>.
+### Step 3: Configure & Train
+
+Edit `packages/ltx-trainer/configs/ltx2_multi_ref_lora.yaml`, then:
+
+```bash
+cd packages/ltx-trainer
+python -m ltx_trainer.train --config configs/ltx2_multi_ref_lora.yaml
+```
+
+> 📖 Full training guide: [docs/multi_reference_quick_start.md](docs/multi_reference_quick_start.md) | [中文版](docs/multi_reference_quick_start_zh.md)
+
+## 📝 @mention Syntax
+
+| Mention | Modality | Default Attributes |
+|---------|----------|-------------------|
+| `@Image1` | Image | identity, appearance |
+| `@Video1` | Video | motion, camera |
+| `@Audio1` | Audio | audio_rhythm, audio_mood |
+
+**Attribute keywords**: identity, face, appearance, style, motion, camera, scene, rhythm, mood, lip sync
+
+Example:
+```
+"A dancer @Image1 for identity performs @Video1 for motion in a @Image2 style setting."
+```
+
+**Chinese prompts** are supported via the semantic parser (`--use-semantic-parser`):
+```
+"一个人 @Image1 这个人的长相和身份 走在 @Image2 的公园场景里。参考 @Video1 的运镜方式。"
+```
+
+## 🔑 Key Design Decisions
+
+1. **Text-driven semantic routing (Seedance 2.0 approach)** — The model learns to understand "@Image1 for identity" from text encoder output via cross-attention, NOT from hand-crafted attention mask weights
+2. **IC-LoRA style token concatenation** — Reference tokens concatenated along sequence dimension with negative temporal positions
+3. **Isolated reference groups** — Different reference groups do NOT attend to each other (0 mask), preventing attribute confusion
+4. **Full target↔reference cross-attention** — Target tokens attend to each reference group with weight 1.0
+5. **LoRA-only training** — Avoids catastrophic forgetting of base model capabilities
+6. **Reference dropout** — Random 10% dropout for classifier-free guidance style robustness
 
 ## 📦 Packages
 
 This repository is organized as a monorepo with three main packages:
 
-* **[ltx-core](packages/ltx-core/)** - Core model implementation, inference stack, and utilities
-* **[ltx-pipelines](packages/ltx-pipelines/)** - High-level pipeline implementations for text-to-video, image-to-video, and other generation modes
-* **[ltx-trainer](packages/ltx-trainer/)** - Training and fine-tuning tools for LoRA, full fine-tuning, and IC-LoRA
-
-Each package has its own README and documentation. See the [Documentation](#-documentation) section below.
+* **[ltx-core](packages/ltx-core/)** — Core model implementation, inference stack, and utilities
+* **[ltx-pipelines](packages/ltx-pipelines/)** — High-level pipeline implementations including multi-reference pipeline
+* **[ltx-trainer](packages/ltx-trainer/)** — Training and fine-tuning tools with multi-reference strategy
 
 ## 📚 Documentation
 
-Each package includes comprehensive documentation:
+* **[Multi-Reference Quick Start](docs/multi_reference_quick_start.md)** — Training & inference guide for multi-reference system
+* **[Multi-Reference Quick Start (中文)](docs/multi_reference_quick_start_zh.md)** — 中文版快速入门
+* **[LTX-Core README](packages/ltx-core/README.md)** — Core model implementation
+* **[LTX-Pipelines README](packages/ltx-pipelines/README.md)** — Pipeline implementations
+* **[LTX-Trainer README](packages/ltx-trainer/README.md)** — Training documentation
 
-* **[LTX-Core README](packages/ltx-core/README.md)** - Core model implementation, inference stack, and utilities
-* **[LTX-Pipelines README](packages/ltx-pipelines/README.md)** - High-level pipeline implementations and usage guides
-* **[LTX-Trainer README](packages/ltx-trainer/README.md)** - Training and fine-tuning documentation with detailed guides
+## 🙏 Acknowledgements
+
+- **[Lightricks/LTX-2](https://github.com/Lightricks/LTX-2)** — Base model and original codebase
+- **[Seedance 2.0](https://seedance.ai)** — Inspiration for @mention reference binding and text-driven semantic routing
+- **[ID-LoRA (arxiv 2603.10256)](https://arxiv.org/abs/2603.10256)** — Reference conditioning via token concatenation and identity guidance
+- **[IC-LoRA](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control)** — Image-conditioned LoRA for reference-based video generation
+
+## 📄 License
+
+This project is licensed under the [Apache 2.0 License](LICENSE), same as the original LTX-2 project.
