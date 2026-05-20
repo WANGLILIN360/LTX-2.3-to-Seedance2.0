@@ -1,0 +1,266 @@
+# =============================================================================
+# LTX-2 Multi-Reference LoRA Training Configuration
+# =============================================================================
+#
+# This configuration trains a LoRA adapter for unified multi-modal
+# multi-reference conditioning, inspired by Seedance 2.0's @mention system.
+#
+# It extends the IC-LoRA (video_to_video) pattern to support simultaneous
+# conditioning on multiple images, videos, and audio references with
+# attribute-aware attention routing.
+#
+# Compatible base models:
+#   - ltx-2.3-22b-dev.safetensors (recommended for training)
+#   - ltx-2.3-22b-distilled-1.1.safetensors (faster but less flexible)
+#
+# Compatible IC-LoRA weights (can be loaded alongside this LoRA):
+#   - LTX-2.3-22b-IC-LoRA-Union-Control
+#   - LTX-2.3-22b-IC-LoRA-Motion-Track-Control
+#   - LTX-2-19b-IC-LoRA-Pose-Control
+#   - LTX-2.3-22b-IC-LoRA-HDR
+#   - LTX-2.3-22b-IC-LoRA-LipDub
+#   - LTX-2-19b-LoRA-Camera-Control-* (various camera movements)
+#
+# Dataset structure for multi-reference training:
+#   preprocessed_data_root/
+#   ├── latents/              # Target video latents (VAE-encoded)
+#   ├── conditions/           # Text embeddings for each video
+#   ├── audio_latents/        # Target audio latents (if with_audio: true)
+#   ├── ref_image_latents/    # Image reference latents (multiple per sample)
+#   ├── ref_video_latents/    # Video reference latents (multiple per sample)
+#   └── ref_audio_latents/    # Audio reference latents (if with_audio_references: true)
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Model Configuration
+# -----------------------------------------------------------------------------
+model:
+  # Path to the LTX-2.3 model checkpoint (.safetensors file)
+  # Use the 22b-dev model for training (not the distilled version)
+  model_path: "path/to/ltx-2.3-22b-dev.safetensors"
+
+  # Path to the text encoder model directory
+  text_encoder_path: "path/to/gemma-3-12b-it-qat-q4_0-unquantized"
+
+  # Training mode: must be "lora" for multi-reference training
+  training_mode: "lora"
+
+  # Optional: Path to resume training from a checkpoint
+  load_checkpoint: null
+
+# -----------------------------------------------------------------------------
+# LoRA Configuration
+# -----------------------------------------------------------------------------
+lora:
+  # Rank of the LoRA matrices
+  # Higher rank = more capacity for learning attribute routing
+  # Recommended: 64 for multi-reference, 32 for simpler tasks
+  rank: 64
+
+  # Alpha scaling factor (usually set equal to rank)
+  alpha: 64
+
+  # Dropout probability for LoRA layers
+  dropout: 0.0
+
+  # Which transformer modules to apply LoRA to
+  # For multi-reference training, we target attention layers in both
+  # video and audio branches, including cross-modal attention.
+  #
+  # CRITICAL: The cross-attention modules (audio_to_video_attn, video_to_audio_attn)
+  # are essential for learning attribute routing between modalities.
+  target_modules:
+    # Attention layers (matches both video and audio branches)
+    - "to_k"
+    - "to_q"
+    - "to_v"
+    - "to_out.0"
+    # Cross-modal attention layers (essential for attribute routing)
+    - "audio_to_video_attn.to_k"
+    - "audio_to_video_attn.to_q"
+    - "audio_to_video_attn.to_v"
+    - "audio_to_video_attn.to_out.0"
+    - "video_to_audio_attn.to_k"
+    - "video_to_audio_attn.to_q"
+    - "video_to_audio_attn.to_v"
+    - "video_to_audio_attn.to_out.0"
+    # Uncomment to also train feed-forward layers (increases capacity):
+    # - "ff.net.0.proj"
+    # - "ff.net.2"
+    # - "audio_ff.net.0.proj"
+    # - "audio_ff.net.2"
+
+# -----------------------------------------------------------------------------
+# Training Strategy Configuration
+# -----------------------------------------------------------------------------
+training_strategy:
+  # Strategy name: "multi_reference" for unified multi-modal conditioning
+  name: "multi_reference"
+
+  # Probability of conditioning on the first frame during training
+  first_frame_conditioning_p: 0.1
+
+  # Enable joint audio-video training
+  with_audio: true
+
+  # Directory name for target audio latents
+  audio_latents_dir: "audio_latents"
+
+  # Directory names for reference latents
+  ref_image_latents_dir: "ref_image_latents"
+  ref_video_latents_dir: "ref_video_latents"
+  ref_audio_latents_dir: "ref_audio_latents"
+
+  # Maximum number of references per sample
+  max_image_references: 9
+  max_video_references: 3
+  max_audio_references: 3
+
+  # Reference dropout probability (classifier-free guidance style)
+  # Helps the model learn to generate without references when needed
+  reference_dropout_p: 0.1
+
+  # Default attribute tags for references without explicit annotations
+  # These control the attention mask weights for each reference type
+  default_image_attributes:
+    - "identity"
+    - "appearance"
+  default_video_attributes:
+    - "motion"
+    - "camera"
+  default_audio_attributes:
+    - "audio_rhythm"
+    - "audio_mood"
+
+  # Spatial downscale factor for video/image references
+  # Use 2 for half-resolution references (saves memory, matches IC-LoRA training)
+  reference_downscale_factor: 1
+
+  # Whether to include audio references in training
+  with_audio_references: true
+
+  # Identity guidance scale for training (0.0 = disabled)
+  # Extrapolates between with-reference and without-reference predictions
+  # to amplify identity-specific features. Requires a separate forward pass.
+  # Recommended: 0.5-2.0 for identity-focused training
+  identity_guidance_scale: 0.0
+
+  # Learnable slot embeddings for @mention binding (auxiliary training signal)
+  # Adds unique embeddings per reference slot (Image1, Video1, etc.) to reference tokens.
+  # Helps the model learn which reference corresponds to which @mention.
+  # Note: text-side injection requires preprocessing-time support (not yet implemented).
+  with_slot_embeddings: false
+  slot_embed_dim: 128
+
+# -----------------------------------------------------------------------------
+# Optimization Configuration
+# -----------------------------------------------------------------------------
+optimization:
+  # Learning rate (slightly lower for multi-reference complexity)
+  learning_rate: 5e-5
+
+  # Total training steps (more steps needed for attribute routing)
+  steps: 5000
+
+  # Batch size per GPU
+  batch_size: 1
+
+  # Gradient accumulation steps
+  gradient_accumulation_steps: 4
+
+  # Maximum gradient norm
+  max_grad_norm: 1.0
+
+  # Optimizer type
+  optimizer_type: "adamw"
+
+  # Learning rate scheduler
+  scheduler_type: "cosine"
+
+  scheduler_params: { }
+
+  # Enable gradient checkpointing
+  enable_gradient_checkpointing: true
+
+# -----------------------------------------------------------------------------
+# Acceleration Configuration
+# -----------------------------------------------------------------------------
+acceleration:
+  mixed_precision_mode: "bf16"
+  quantization: null
+  load_text_encoder_in_8bit: false
+  offload_optimizer_during_validation: true
+
+# -----------------------------------------------------------------------------
+# Data Configuration
+# -----------------------------------------------------------------------------
+data:
+  preprocessed_data_root: "/path/to/preprocessed/data"
+  num_dataloader_workers: 2
+
+# -----------------------------------------------------------------------------
+# Validation Configuration
+# -----------------------------------------------------------------------------
+validation:
+  # Prompts with @mention syntax to test reference binding
+  prompts:
+    - "A woman @Image1 for identity walks through @Image2's garden. Replicate @Video1's camera dolly. @Audio1 for background rhythm."
+    - "A man @Image1 for appearance plays guitar in a studio. Use @Video1's motion for hand movements. @Audio1 for musical pacing."
+
+  negative_prompt: "worst quality, inconsistent motion, blurry, jittery, distorted"
+  images: null
+  # Multi-reference validation: list of lists (outer = per-prompt, inner = per-reference)
+  # Each inner list provides paths to reference images/videos for that prompt.
+  reference_images: null  # e.g. [["ref1_img1.png", "ref1_img2.png"], ["ref2_img1.png"]]
+  reference_video_paths: null  # e.g. [["ref1_vid1.mp4"], ["ref2_vid1.mp4", "ref2_vid2.mp4"]]
+  identity_guidance_scale: 0.0  # Set > 0 to enable identity guidance during validation
+  video_dims: [ 576, 576, 89 ]
+  frame_rate: 25.0
+  seed: 42
+  inference_steps: 30
+  interval: 500
+  guidance_scale: 4.0
+  stg_scale: 1.0
+  stg_blocks: [29]
+  stg_mode: "stg_av"
+  generate_audio: true
+  skip_initial_validation: false
+
+# -----------------------------------------------------------------------------
+# Checkpoint Configuration
+# -----------------------------------------------------------------------------
+checkpoints:
+  interval: 500
+  keep_last_n: -1
+  precision: "bfloat16"
+
+# -----------------------------------------------------------------------------
+# Flow Matching Configuration
+# -----------------------------------------------------------------------------
+flow_matching:
+  timestep_sampling_mode: "shifted_logit_normal"
+  timestep_sampling_params: { }
+
+# -----------------------------------------------------------------------------
+# Hugging Face Hub Configuration
+# -----------------------------------------------------------------------------
+hub:
+  push_to_hub: false
+  hub_model_id: null
+
+# -----------------------------------------------------------------------------
+# Weights & Biases Configuration
+# -----------------------------------------------------------------------------
+wandb:
+  enabled: false
+  project: "ltx-2-multi-ref-trainer"
+  entity: null
+  tags: [ "ltx2", "lora", "multi-reference", "attribute-routing" ]
+  log_validation_videos: true
+
+# -----------------------------------------------------------------------------
+# General Configuration
+# -----------------------------------------------------------------------------
+seed: 42
+output_dir: "outputs/ltx2_multi_ref_lora"
