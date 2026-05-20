@@ -211,26 +211,18 @@ class MultiReferenceStrategy(TrainingStrategy):
         return []
 
     def get_data_sources(self) -> dict[str, str]:
-        """Multi-reference training requires latents, conditions, and reference latents.
-
-        Only includes reference directories that are actually configured,
-        so that missing directories don't cause FileNotFoundError.
-        """
+        """Multi-reference training requires latents, conditions, and reference latents."""
         sources: dict[str, str] = {
             "latents": "latents",
             "conditions": "conditions",
+            self.config.ref_image_latents_dir: "ref_image_latents",
+            self.config.ref_video_latents_dir: "ref_video_latents",
         }
-
-        # Only include reference directories if max count > 0
-        if self.config.max_image_references > 0:
-            sources[self.config.ref_image_latents_dir] = "ref_image_latents"
-        if self.config.max_video_references > 0:
-            sources[self.config.ref_video_latents_dir] = "ref_video_latents"
 
         if self.config.with_audio:
             sources[self.config.audio_latents_dir] = "audio_latents"
 
-        if self.config.with_audio_references and self.config.max_audio_references > 0:
+        if self.config.with_audio_references:
             sources[self.config.ref_audio_latents_dir] = "ref_audio_latents"
 
         return sources

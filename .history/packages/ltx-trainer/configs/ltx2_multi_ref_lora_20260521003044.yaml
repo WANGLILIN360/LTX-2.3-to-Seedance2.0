@@ -139,7 +139,7 @@ training_strategy:
   reference_downscale_factor: 1
 
   # Whether to include audio references in training
-  with_audio_references: false  # Set to true and max_audio_references > 0 to enable
+  with_audio_references: true
 
   # Identity guidance scale for training (0.0 = disabled)
   # Extrapolates between with-reference and without-reference predictions

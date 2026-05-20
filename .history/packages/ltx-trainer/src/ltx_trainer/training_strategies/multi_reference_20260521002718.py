@@ -211,26 +211,18 @@ class MultiReferenceStrategy(TrainingStrategy):
         return []
 
     def get_data_sources(self) -> dict[str, str]:
-        """Multi-reference training requires latents, conditions, and reference latents.
-
-        Only includes reference directories that are actually configured,
-        so that missing directories don't cause FileNotFoundError.
-        """
+        """Multi-reference training requires latents, conditions, and reference latents."""
         sources: dict[str, str] = {
             "latents": "latents",
             "conditions": "conditions",
+            self.config.ref_image_latents_dir: "ref_image_latents",
+            self.config.ref_video_latents_dir: "ref_video_latents",
         }
-
-        # Only include reference directories if max count > 0
-        if self.config.max_image_references > 0:
-            sources[self.config.ref_image_latents_dir] = "ref_image_latents"
-        if self.config.max_video_references > 0:
-            sources[self.config.ref_video_latents_dir] = "ref_video_latents"
 
         if self.config.with_audio:
             sources[self.config.audio_latents_dir] = "audio_latents"
 
-        if self.config.with_audio_references and self.config.max_audio_references > 0:
+        if self.config.with_audio_references:
             sources[self.config.ref_audio_latents_dir] = "ref_audio_latents"
 
         return sources
@@ -489,26 +481,6 @@ class MultiReferenceStrategy(TrainingStrategy):
                 groups.append(group)
 
         return groups
-
-    @staticmethod
-    def _get_slot_metadata(ref_data: dict[str, Any], slot_index: int) -> dict[str, Any]:
-        """Extract metadata for a specific slot from merged multi-slot data.
-
-        When _merge_multi_slot_data stores per-slot metadata as lists,
-        this method extracts the metadata for a single slot so that
-        _make_image_ref_group / _make_video_ref_group can use the correct
-        dimensions for each reference independently.
-        """
-        slot_data: dict[str, Any] = {}
-        for key, value in ref_data.items():
-            if key == "latents":
-                continue  # Skip the latents list; caller already has the right tensor
-            if isinstance(value, list) and len(value) > slot_index:
-                slot_data[key] = value[slot_index]
-            else:
-                # Not a per-slot list — use as-is (e.g., shared metadata)
-                slot_data[key] = value
-        return slot_data
 
     def _make_image_ref_group(
         self,
