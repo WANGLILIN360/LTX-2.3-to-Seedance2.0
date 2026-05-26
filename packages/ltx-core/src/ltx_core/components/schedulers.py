@@ -38,6 +38,9 @@ class LTX2Scheduler(SchedulerProtocol):
         b = base_shift - mm * x1
         sigma_shift = (tokens) * mm + b
 
+        # Clamp sigma_shift to prevent exp() overflow in float32 (log(max_float32) ~ 88.7)
+        sigma_shift = min(sigma_shift, 10.0)
+
         power = 1
         sigmas = torch.where(
             sigmas != 0,
@@ -51,8 +54,10 @@ class LTX2Scheduler(SchedulerProtocol):
             non_zero_sigmas = sigmas[non_zero_mask]
             one_minus_z = 1.0 - non_zero_sigmas
             scale_factor = one_minus_z[-1] / (1.0 - terminal)
-            stretched = 1.0 - (one_minus_z / scale_factor)
-            sigmas[non_zero_mask] = stretched
+            # Guard against division by zero when the last non-zero sigma is exactly 1.0
+            if scale_factor > 0:
+                stretched = 1.0 - (one_minus_z / scale_factor)
+                sigmas[non_zero_mask] = stretched
 
         return sigmas.to(torch.float32)
 
