@@ -54,6 +54,19 @@ from ltx_trainer.training_strategies.base_strategy import (
 )
 
 
+def _validate_attributes(v: list[str], field_name: str) -> list[str]:
+    """Validate that attribute names are valid ReferenceAttribute values."""
+    valid = set(ReferenceAttribute)
+    invalid = [a for a in v if a not in valid]
+    if invalid:
+        valid_str = ", ".join(sorted(str(x) for x in valid))
+        raise ValueError(
+            f"Invalid attribute(s) in {field_name}: {invalid}. "
+            f"Valid attributes: {valid_str}"
+        )
+    return v
+
+
 class MultiReferenceConfig(TrainingStrategyConfigBase):
     """Configuration for multi-reference training strategy."""
 
@@ -137,6 +150,21 @@ class MultiReferenceConfig(TrainingStrategyConfigBase):
         default=["audio_rhythm", "audio_mood"],
         description="Default attribute tags for audio references",
     )
+
+    @field_validator("default_image_attributes")
+    @classmethod
+    def validate_image_attrs(cls, v: list[str]) -> list[str]:
+        return _validate_attributes(v, "default_image_attributes")
+
+    @field_validator("default_video_attributes")
+    @classmethod
+    def validate_video_attrs(cls, v: list[str]) -> list[str]:
+        return _validate_attributes(v, "default_video_attributes")
+
+    @field_validator("default_audio_attributes")
+    @classmethod
+    def validate_audio_attrs(cls, v: list[str]) -> list[str]:
+        return _validate_attributes(v, "default_audio_attributes")
 
     # Reference downscale
     reference_downscale_factor: int = Field(
@@ -712,27 +740,26 @@ class MultiReferenceStrategy(TrainingStrategy):
     ) -> torch.Tensor | None:
         """Build a 2-D self-attention mask with isolated reference groups.
 
-        Uses full cross-attention (weight=1.0) between target tokens and each
-        reference group. The model learns semantic routing from the text
-        encoder's context (e.g., "for identity" in the prompt), NOT from
-        hand-crafted mask weights. This is the Seedance 2.0 approach.
+        Uses attribute-weighted cross-attention between target tokens and each
+        reference group. The attention weight is determined by the reference's
+        attributes (e.g., identity=1.0, camera=0.6), enabling the model to
+        learn different attention strengths for different reference types.
 
         The mask has the block structure:
                      target      ref_grp_0   ref_grp_1   ...
                  ┌───────────┬───────────┬───────────┬─────┐
-        target    │     1     │     1     │     1     │ ... │
+        target    │     1     │    w_0    │    w_1    │ ... │
                  ├───────────┼───────────┼───────────┼─────┤
-        ref_grp_0 │     1     │     1     │     0     │ ... │
+        ref_grp_0 │    w_0    │     1     │     0     │ ... │
                  ├───────────┼───────────┼───────────┼─────┤
-        ref_grp_1 │     1     │     0     │     1     │ ... │
+        ref_grp_1 │    w_1    │     0     │     1     │ ... │
                  ├───────────┼───────────┼───────────┼─────┤
         ...       │  ...      │  ...      │  ...      │ ... │
                  └───────────┴───────────┴───────────┴─────┘
 
         Different reference groups do NOT attend to each other (0) to prevent
-        attribute confusion. Full cross-attention (1) between target and each
-        reference group lets the model learn which reference influences which
-        aspect from the text context.
+        attribute confusion. Cross-attention weights (w_i) are derived from
+        each group's attention_weight, enabling attribute-aware routing.
         """
         if not ref_groups:
             return None
@@ -748,12 +775,11 @@ class MultiReferenceStrategy(TrainingStrategy):
         for group in ref_groups:
             grp_start = offset
             grp_end = offset + group.seq_len
+            weight = group.attention_weight  # Use computed attribute weight
 
-            # Full cross-attention between target and this reference group.
-            # The model learns from text context (via cross-attention with
-            # the text encoder output) which reference to attend to for what.
-            mask[:, :target_seq_len, grp_start:grp_end] = 1.0
-            mask[:, grp_start:grp_end, :target_seq_len] = 1.0
+            # Attribute-weighted cross-attention between target and this group
+            mask[:, :target_seq_len, grp_start:grp_end] = weight
+            mask[:, grp_start:grp_end, :target_seq_len] = weight
             # This reference group attends to itself fully
             mask[:, grp_start:grp_end, grp_start:grp_end] = 1.0
             # Cross-reference attention remains 0 (already initialized)
@@ -771,21 +797,27 @@ class MultiReferenceStrategy(TrainingStrategy):
         """Apply random dropout to individual references for robustness.
 
         Each reference is independently dropped with probability reference_dropout_p.
-        At least one reference is always kept if any are available.
+        At least one reference is always kept if all would be dropped.
+        Uses torch.bernoulli for vectorized sampling with correct distribution.
         """
         if not groups:
             return groups
 
-        kept: list[_ReferenceGroup] = []
-        for group in groups:
-            if torch.rand(1).item() >= self.config.reference_dropout_p:
-                kept.append(group)
-            else:
-                logger.debug(f"Dropping {group.modality.value} reference (dropout)")
+        n = len(groups)
+        keep_probs = torch.full((n,), 1.0 - self.config.reference_dropout_p, device=device)
+        keep_mask = torch.bernoulli(keep_probs).bool()
 
-        # Always keep at least one reference if available
-        if not kept and groups:
-            kept = [groups[0]]
+        # Ensure at least one reference is kept (without biasing the distribution
+        # of the others - only fix when ALL would be dropped)
+        if not keep_mask.any():
+            # Randomly pick one to keep, preserving uniform distribution
+            keep_idx = torch.randint(0, n, (1,), device=device).item()
+            keep_mask[keep_idx] = True
+
+        kept = [group for group, k in zip(groups, keep_mask) if k]
+        dropped = [group for group, k in zip(groups, keep_mask) if not k]
+        for group in dropped:
+            logger.debug(f"Dropping {group.modality.value} reference (dropout)")
 
         return kept
 
@@ -875,7 +907,15 @@ class MultiReferenceStrategy(TrainingStrategy):
         loss = (target_pred - loss_target).pow(2)
         loss_mask = target_loss_mask.unsqueeze(-1).float()
         masked = loss.mul(loss_mask)
-        video_loss = masked.mean(dim=[-2, -1]) / loss_mask.mean(dim=[-2, -1]).clamp(min=1e-8)
+
+        # Guard against near-zero denominator when all tokens are conditioning.
+        # When < 1% of tokens are non-conditioning, skip loss to avoid explosion.
+        mask_mean = loss_mask.mean(dim=[-2, -1])
+        video_loss = torch.where(
+            mask_mean > 0.01,
+            masked.mean(dim=[-2, -1]) / mask_mean,
+            torch.zeros_like(mask_mean),
+        )
 
         if not self.config.with_audio or audio_pred is None or inputs.audio_targets is None:
             return video_loss
