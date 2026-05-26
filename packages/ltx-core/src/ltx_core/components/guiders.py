@@ -374,4 +374,9 @@ def projection_coef(to_project: torch.Tensor, project_onto: torch.Tensor) -> tor
     negative_flat = project_onto.reshape(batch_size, -1)
     dot_product = torch.sum(positive_flat * negative_flat, dim=1, keepdim=True)
     squared_norm = torch.sum(negative_flat**2, dim=1, keepdim=True) + 1e-8
-    return dot_product / squared_norm
+    coef = dot_product / squared_norm  # shape: (batch_size, 1)
+    # Unsqueeze to match to_project's dimensions for proper broadcasting
+    # e.g. (B,1) -> (B,1,1,1) for 4D latents, (B,1,1) for 3D latents
+    while coef.dim() < to_project.dim():
+        coef = coef.unsqueeze(-1)
+    return coef
